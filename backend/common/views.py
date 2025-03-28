@@ -19,14 +19,13 @@ class UserViewSet(viewsets.ModelViewSet):
     
     def perform_destroy(self, instance):
         """Sobrescreve a destruição padrão para aplicar exclusão lógica."""
-        instance.delete()  # Vai chamar o método 'delete' que desativa o usuário
+        instance.delete() 
     
     def get_queryset(self):
     # Se não for admin, o usuário só pode ver seus próprios dados
         if not self.request.user.is_staff:
             return User.objects.filter(id=self.request.user.id)
         return super().get_queryset()
-
 
 
 class BookViewSet(viewsets.ModelViewSet):
@@ -48,7 +47,7 @@ class BookViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         book = self.get_object()
         if book.status != 'available':
-            raise serializers.ValidationError("Only available books can be updated.")
+            raise serializers.ValidationError("Apenas livros disponíveis podem ser editados.")
         serializer.save()
 
 
@@ -61,5 +60,5 @@ class BookRequestViewSet(viewsets.ModelViewSet):
         """Atribuir a solicitação ao usuário logado."""
         book = serializer.validated_data['book']
         if book.status != 'available':
-            raise serializer.ValidationError("This book is not available for request.")
+            raise serializer.ValidationError("Este livro não está disponivel para doação")
         serializer.save(user=self.request.user)

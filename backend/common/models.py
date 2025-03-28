@@ -84,7 +84,7 @@ class Book(models.Model):
         ('romance', 'Romance'),
         ('mystery', 'Mistério'),
         ('science_fiction', 'Ficção científica'),
-        # Adicione mais categorias conforme necessário
+        
     )
 
     title = models.CharField(max_length=255)
@@ -112,7 +112,7 @@ class BookRequest(models.Model):
         ('denied', 'Denied'),
     )
 
-    book = models.OneToOneField(Book, on_delete=models.CASCADE, related_name='book_request_rel')  # Nome ajustado para evitar conflito
+    book = models.OneToOneField(Book, on_delete=models.CASCADE, related_name='book_request_rel')
     user = models.ForeignKey(User, related_name='book_requests', on_delete=models.CASCADE)
     delivery_option = models.CharField(max_length=255)
     status = models.CharField(
@@ -123,3 +123,4 @@ class BookRequest(models.Model):
 
     def __str__(self):
         return f"Request for {self.book.title} by {self.user.name}"
+    
