@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from datetime import datetime
-from .models import User
+from .models import User, Book, BookRequest
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -54,4 +54,22 @@ class UserSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         return instance
-    
+
+#Book Request
+
+class BookRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookRequest
+        fields = ['id', 'book', 'user', 'delivery_option', 'status']
+
+
+#Books
+
+class BookSerializer(serializers.ModelSerializer):
+    book_request = BookRequestSerializer(read_only=True)  # Exibindo a solicitação associada ao livro
+    user = serializers.StringRelatedField()  # Exibindo o nome do usuário associado ao livro
+
+    class Meta:
+        model = Book
+        fields = ['id', 'title', 'author', 'description', 'category', 'classification', 'status', 'user', 'book_request']
+        read_only_fields = ['user', 'created_at']

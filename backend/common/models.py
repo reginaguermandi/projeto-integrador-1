@@ -63,12 +63,45 @@ class Address(models.Model):
 
 # Modelo de livro
 class Book(models.Model):
+    STATUS_CHOICES = (
+        ('available', 'Available'),
+        ('unavailable', 'Unavailable'),
+        ('reserved', 'Reserved'),
+    )
+
     title = models.CharField(max_length=255)
     author = models.CharField(max_length=255)
     description = models.TextField()
-    category = models.CharField(max_length=255)
-    classification = models.CharField(max_length=50)
-    status = models.CharField(max_length=50)
+    category = models.CharField(max_length=100)
+    classification = models.CharField(max_length=100)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='available',
+    )
+    user = models.ForeignKey(User, related_name='books', on_delete=models.CASCADE)
+    book_request = models.OneToOneField('BookRequest', on_delete=models.SET_NULL, null=True, blank=True, related_name='book_requested')  # related_name ajustado
 
     def __str__(self):
         return self.title
+
+
+# Modelo de solicitação de livro
+class BookRequest(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('denied', 'Denied'),
+    )
+
+    book = models.OneToOneField(Book, on_delete=models.CASCADE, related_name='book_request_rel')  # Nome ajustado para evitar conflito
+    user = models.ForeignKey(User, related_name='book_requests', on_delete=models.CASCADE)
+    delivery_option = models.CharField(max_length=255)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+    )
+
+    def __str__(self):
+        return f"Request for {self.book.title} by {self.user.name}"
