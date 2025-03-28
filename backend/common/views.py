@@ -62,8 +62,40 @@ class BookRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
-        """Atribuir a solicitação ao usuário logado."""
         book = serializer.validated_data['book']
+
+        # Verificar se já existe uma solicitação pendente para o livro
+        existing_request = BookRequest.objects.filter(book=book, status='pending').first()
+        if existing_request:
+            raise serializers.ValidationError("Este livro já tem um pedido pendente.")
+
+        # Verificar se o livro está disponível
         if book.status != 'available':
-            raise serializer.ValidationError("Este livro não está disponivel para doação")
-        serializer.save(user=self.request.user)
+            raise serializer.ValidationError("Este livro não está disponível para doação")
+
+        # Atualizar o status do livro para 'requested' (ou outro status apropriado)
+        book.status = 'requested'  # ou outro status que você queira indicar que foi solicitado
+        book.save()
+
+        # Atribuir a solicitação ao usuário logado
+        book_request = serializer.save(user=self.request.user)
+
+        # Atualizar o campo `book_request` no livro
+        book.book_request = book_request
+        book.save()
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        book = instance.book
+
+    # Se o status do pedido for alterado para "approved" ou "denied", limpar o campo `book_request` do livro
+        if instance.status == 'approved':
+            book.status = 'unavailable'  # Ou outro status apropriado para livros doados
+            book.book_request = None  # Limpa o campo book_request
+            book.save()
+        elif instance.status == 'denied':
+             # Se o pedido for negado, liberar o livro para ser requisitado novamente
+            book.status = 'available'
+            book.book_request = None
+            book.save()
+

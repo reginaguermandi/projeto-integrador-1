@@ -60,7 +60,14 @@ class UserSerializer(serializers.ModelSerializer):
 class BookRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = BookRequest
-        fields = ['id', 'book', 'user', 'delivery_option', 'status']
+        fields = ['id', 'book', 'delivery_option', 'status']
+        read_only_fields = ['user']
+
+    def create(self, validated_data):
+        # Atribuindo automaticamente o 'user' durante a criação
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
+
 
 
 #Books
