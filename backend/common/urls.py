@@ -11,10 +11,8 @@ router.register(r'book_requests', BookRequestViewSet)
 
 urlpatterns = [
     path('api/', include(router.urls)),
-
-    # Rota para obter o token (login)
     path('api/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    
-    # Rota para renovar o token
     path('api/login/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/books/meuslivros', BookViewSet.as_view({'get': 'list'}), name='meus-livros'),
+    path('api/books/catalogo', BookViewSet.as_view({'get': 'list'}), name='catalogo-livros'),
 ]

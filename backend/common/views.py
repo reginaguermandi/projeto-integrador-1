@@ -34,11 +34,31 @@ class BookViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
-        """Filtrar livros do usuário logado ou todos os livros disponíveis."""
+        """
+        Filtra os livros de acordo com a URL:
+        - Para '/api/books/meuslivros', retorna apenas os livros do usuário logado.
+        - Para '/api/books/catalogo', retorna todos os livros com status 'available'.
+        """
         user = self.request.user
-        if user.is_authenticated:
+
+        # Se for a rota '/api/books/meus', retorna os livros do usuário logado
+        if self.action == 'list' and 'meuslivros' in self.request.path:
             return Book.objects.filter(user=user)
+
+        # Se for a rota '/api/books/catalogo', retorna todos os livros com status 'available'
         return Book.objects.filter(status='available')
+    
+    def get_permissions(self):
+        """
+        Define as permissões dependendo da ação:
+        - Para a listagem de 'meus livros' e 'catalogo', permite acesso a todos.
+        - Para criação, edição, exclusão de livros, exige que o usuário esteja logado.
+        """
+        if self.action == 'list' and 'catalogo' in self.request.path:
+            # Permite acesso para qualquer usuário, logado ou não
+            return [AllowAny()]
+        # Para outras ações (criação, edição, etc.), exige que o usuário esteja autenticado
+        return [IsAuthenticated()]
 
     def perform_create(self, serializer):
         """Atribuir o dono do livro ao usuário logado."""
@@ -49,7 +69,6 @@ class BookViewSet(viewsets.ModelViewSet):
         if book.status != 'available':
             raise serializers.ValidationError("Apenas livros disponíveis podem ser editados.")
         serializer.save()
-
 
 class BookRequestViewSet(viewsets.ModelViewSet):
     queryset = BookRequest.objects.all()
