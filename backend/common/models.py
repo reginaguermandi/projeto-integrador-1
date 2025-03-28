@@ -69,11 +69,29 @@ class Book(models.Model):
         ('reserved', 'Reserved'),
     )
 
+    AGE_CHOICES = (
+        ('all_ages', 'Todas as idades'),
+        ('10_and_up', '10 anos ou mais'),
+        ('13_and_up', '13 anos ou mais'),
+        ('16_and_up', '16 anos ou mais'),
+        ('18_and_up', '18 anos ou mais'),
+    )
+
+    CATEGORY_CHOICES = (
+        ('fiction', 'Ficção'),
+        ('non_fiction', 'Não-ficção'),
+        ('adventure', 'Aventura'),
+        ('romance', 'Romance'),
+        ('mystery', 'Mistério'),
+        ('science_fiction', 'Ficção científica'),
+        # Adicione mais categorias conforme necessário
+    )
+
     title = models.CharField(max_length=255)
     author = models.CharField(max_length=255)
     description = models.TextField()
-    category = models.CharField(max_length=100)
-    classification = models.CharField(max_length=100)
+    category = models.CharField(max_length=100, choices=CATEGORY_CHOICES)
+    classification = models.CharField(max_length=20, choices=AGE_CHOICES)
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
