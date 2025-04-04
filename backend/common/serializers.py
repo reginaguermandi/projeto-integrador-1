@@ -83,6 +83,12 @@ class BookRequestSerializer(serializers.ModelSerializer):
         validated_data['book'] = validated_data.pop('book_id')
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
+    
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        # Remove o book_id da resposta (só serve pro POST)
+        rep.pop('book_id', None)
+        return rep
 
 
 

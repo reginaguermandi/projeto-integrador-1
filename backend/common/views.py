@@ -1,8 +1,16 @@
 from django.shortcuts import render
-from rest_framework import viewsets
+from rest_framework import viewsets, serializers, status
 from .models import User, Book, BookRequest
 from .serializers import UserSerializer, BookSerializer, BookRequestSerializer
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+def update_book_status(book, status, clear_request=False):
+    book.status = status
+    if clear_request:
+        book.book_request = None
+    book.save()
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.filter(is_active=True)  # Só listar usuários ativos
@@ -36,7 +44,7 @@ class BookViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
-        if self.action == 'list' and 'mybooks' in self.request.path:
+        if self.action == 'list' and 'my-books' in self.request.path:
             return Book.objects.filter(user=user)
 
         return Book.objects.filter(status='available')
@@ -61,21 +69,28 @@ class BookRequestViewSet(viewsets.ModelViewSet):
     serializer_class = BookRequestSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        # Filtra os pedidos apenas do usuário autenticado
+        return BookRequest.objects.filter(user=self.request.user)
+
     def perform_create(self, serializer):
-        book = serializer.validated_data['book']
+        book = serializer.validated_data['book_id']
+        user = self.request.user 
+
+        if book.user == user:
+            raise serializers.ValidationError("Você não pode solicitar um livro que você mesmo cadastrou.")
 
         # Verificar se já existe uma solicitação pendente para o livro
         existing_request = BookRequest.objects.filter(book=book, status='pending').first()
         if existing_request:
-            raise serializer.ValidationError("Este livro já tem um pedido pendente.")
+            raise serializers.ValidationError("Este livro já tem um pedido pendente.")
 
         # Verificar se o livro está disponível
         if book.status != 'available':
-            raise serializer.ValidationError("Este livro não está disponível para doação")
+            raise serializers.ValidationError("Este livro não está disponível para doação")
 
         # Atualizar o status do livro para 'requested' (ou outro status apropriado)
-        book.status = 'requested'  # ou outro status que você queira indicar que foi solicitado
-        book.save()
+        update_book_status(book, 'requested')
 
         # Atribuir a solicitação ao usuário logado
         book_request = serializer.save(user=self.request.user)
@@ -88,14 +103,24 @@ class BookRequestViewSet(viewsets.ModelViewSet):
         instance = serializer.save()
         book = instance.book
 
-    # Se o status do pedido for alterado para "approved" ou "denied", limpar o campo `book_request` do livro
+        # Se o status do pedido for alterado para "approved" ou "denied", limpar o campo `book_request` do livro
         if instance.status == 'approved':
-            book.status = 'unavailable'  # Ou outro status apropriado para livros doados
-            book.book_request = None  # Limpa o campo book_request
-            book.save()
+            update_book_status(book, 'unavailable', clear_request=True)
         elif instance.status == 'denied':
-             # Se o pedido for negado, liberar o livro para ser requisitado novamente
-            book.status = 'available'
-            book.book_request = None
-            book.save()
+            # Se o pedido for negado, liberar o livro para ser requisitado novamente
+            update_book_status(book, 'available', clear_request=True)
 
+    def cancelar(self, request, pk=None):
+        book_request = self.get_object()
+
+        # Verifica se o usuário é o dono da solicitação
+        if book_request.user != request.user:
+            return Response({"detail": "Você não tem permissão para cancelar este pedido."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Atualiza status do pedido e do livro
+        book_request.status = 'cancelled'
+        book_request.save()
+
+        update_book_status(book_request.book, 'available', clear_request=True)
+
+        return Response({"detail": "Pedido cancelado com sucesso."}, status=status.HTTP_200_OK)
