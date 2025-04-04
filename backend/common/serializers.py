@@ -56,21 +56,38 @@ class UserSerializer(serializers.ModelSerializer):
         return instance
 
 #Book Request
+class BookDonorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'name', 'email']
+
+class BookInfoSerializer(serializers.ModelSerializer):
+    donated_by = BookDonorSerializer(source='user', read_only=True)
+
+    class Meta:
+        model = Book
+        fields = ['id', 'title', 'author', 'donated_by']
+
 
 class BookRequestSerializer(serializers.ModelSerializer):
+    book = BookInfoSerializer(read_only=True)
+    book_id = serializers.PrimaryKeyRelatedField(queryset=Book.objects.all(), write_only=True)
+
     class Meta:
         model = BookRequest
-        fields = ['id', 'book', 'delivery_option', 'status']
+        fields = ['id', 'book', 'book_id', 'delivery_option', 'status']
         read_only_fields = ['user']
 
     def create(self, validated_data):
         # Atribuindo automaticamente o 'user' durante a criação
+        validated_data['book'] = validated_data.pop('book_id')
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
 
 
 
 #Books
+
 
 class BookSerializer(serializers.ModelSerializer):
     book_request = BookRequestSerializer(read_only=True)  # Exibindo a solicitação associada ao livro

@@ -67,7 +67,7 @@ class BookRequestViewSet(viewsets.ModelViewSet):
         # Verificar se já existe uma solicitação pendente para o livro
         existing_request = BookRequest.objects.filter(book=book, status='pending').first()
         if existing_request:
-            raise serializers.ValidationError("Este livro já tem um pedido pendente.")
+            raise serializer.ValidationError("Este livro já tem um pedido pendente.")
 
         # Verificar se o livro está disponível
         if book.status != 'available':
