@@ -26,8 +26,47 @@ class UserViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
     
     def perform_destroy(self, instance):
-        """Sobrescreve a destruição padrão para aplicar exclusão lógica."""
-        instance.delete() 
+        """Sobrescreve a destruição padrão para verificar solicitações em aberto."""
+        # Verificar se o usuário possui solicitações pendentes como solicitante
+        open_requests_as_requester = BookRequest.objects.filter(user=instance, status='pending')
+
+        # Verificar se o usuário possui solicitações pendentes como doador
+        open_requests_as_donor = BookRequest.objects.filter(book__user=instance, status='pending')
+
+        if open_requests_as_requester.exists() or open_requests_as_donor.exists():
+            # Verificar se o cliente confirmou a exclusão
+            confirm = self.request.query_params.get('confirm', 'false').lower()
+            if confirm != 'true':
+                # Retornar mensagem informando sobre as solicitações em aberto
+                response = {
+                    "detail": "O usuário possui solicitações de livros em aberto. Deseja continuar e cancelar essas solicitações?",
+                    "open_requests_as_requester": [
+                        {"id": req.id, "book_title": req.book.title} for req in open_requests_as_requester
+                    ],
+                    "open_requests_as_donor": [
+                        {"id": req.id, "book_title": req.book.title, "requester": req.user.name} for req in open_requests_as_donor
+                    ]
+                }
+                raise serializers.ValidationError(response)
+
+            # Caso o cliente confirme, tratar as solicitações pendentes
+            # 1. Se for solicitante, cancelar as solicitações e liberar os livros
+            for request in open_requests_as_requester:
+                update_book_status(request.book, 'available', clear_request=True)
+                request.status = 'cancelled'
+                request.save()
+
+            # 2. Se for doador, cancelar as solicitações e excluir os livros
+            for request in open_requests_as_donor:
+                request.status = 'cancelled'
+                request.save()
+
+            # Excluir todos os livros do usuário doador
+            instance.books.all().delete()
+
+        # Desativar o usuário
+        instance.is_active = False
+        instance.save()
     
     def get_queryset(self):
     # Se não for admin, o usuário só pode ver seus próprios dados
