@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 def update_book_status(book, status, clear_request=False):
+    """Atualiza o status do livro e limpa o campo book_request, se necessário."""
     book.status = status
     if clear_request:
         book.book_request = None
@@ -166,3 +167,51 @@ class BookRequestViewSet(viewsets.ModelViewSet):
         update_book_status(book_request.book, 'available', clear_request=True)
 
         return Response({"detail": "Pedido cancelado com sucesso."}, status=status.HTTP_200_OK)
+
+class DonorBookRequestViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request):
+        """Lista as solicitações associadas aos livros do usuário logado."""
+        user = request.user
+        book_requests = BookRequest.objects.filter(book__user=user)
+        serializer = BookRequestSerializer(book_requests, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['patch'], url_path='approve')
+    def approve_request(self, request, pk=None):
+        """Aprova uma solicitação de livro."""
+        try:
+            book_request = BookRequest.objects.get(pk=pk, book__user=request.user)
+        except BookRequest.DoesNotExist:
+            return Response({"detail": "Solicitação não encontrada ou você não tem permissão para aprová-la."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Atualizar o status da solicitação para 'approved'
+        book_request.status = 'approved'
+        book_request.save()
+
+        # Atualizar o status do livro para 'unavailable'
+        book_request.book.status = 'unavailable'
+        book_request.book.save()
+
+        return Response({"detail": "Solicitação aprovada com sucesso."}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['patch'], url_path='deny')
+    def deny_request(self, request, pk=None):
+        """Nega uma solicitação de livro."""
+        try:
+            book_request = BookRequest.objects.get(pk=pk, book__user=request.user)
+        except BookRequest.DoesNotExist:
+            return Response({"detail": "Solicitação não encontrada ou você não tem permissão para negá-la."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Atualizar o status da solicitação para 'denied'
+        book_request.status = 'denied'
+        book_request.save()
+
+        # Atualizar o status do livro para 'available' e limpar o campo book_request
+        book = book_request.book
+        book.status = 'available'
+        book.book_request = None  # Limpa o campo book_request
+        book.save()
+
+        return Response({"detail": "Solicitação negada com sucesso. O livro está disponível no catálogo."}, status=status.HTTP_200_OK)
