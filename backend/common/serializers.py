@@ -146,13 +146,14 @@ class BookInfoSerializer(serializers.ModelSerializer):
 
 
 class BookRequestSerializer(serializers.ModelSerializer):
+    requester_name = serializers.CharField(source='user.name', read_only=True)
     book = BookInfoSerializer(read_only=True)
     book_id = serializers.PrimaryKeyRelatedField(queryset=Book.objects.all(), write_only=True)
 
     class Meta:
         model = BookRequest
-        fields = ['id', 'book', 'book_id', 'delivery_option', 'status']
-        read_only_fields = ['user']
+        fields = ['id', 'book', 'book_id', 'requester_name', 'delivery_option', 'status']
+        read_only_fields = ['user', 'id', 'book', 'requester_name', 'status']
 
     def create(self, validated_data):
         # Atribuir automaticamente o 'user' durante a criação

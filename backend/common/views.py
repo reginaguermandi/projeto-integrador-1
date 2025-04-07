@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 def update_book_status(book, status, clear_request=False):
+    """Atualiza o status do livro e limpa o campo book_request, se necessário."""
     book.status = status
     if clear_request:
         book.book_request = None
@@ -26,8 +27,47 @@ class UserViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
     
     def perform_destroy(self, instance):
-        """Sobrescreve a destruição padrão para aplicar exclusão lógica."""
-        instance.delete() 
+        """Sobrescreve a destruição padrão para verificar solicitações em aberto."""
+        # Verificar se o usuário possui solicitações pendentes como solicitante
+        open_requests_as_requester = BookRequest.objects.filter(user=instance, status='pending')
+
+        # Verificar se o usuário possui solicitações pendentes como doador
+        open_requests_as_donor = BookRequest.objects.filter(book__user=instance, status='pending')
+
+        if open_requests_as_requester.exists() or open_requests_as_donor.exists():
+            # Verificar se o cliente confirmou a exclusão
+            confirm = self.request.query_params.get('confirm', 'false').lower()
+            if confirm != 'true':
+                # Retornar mensagem informando sobre as solicitações em aberto
+                response = {
+                    "detail": "O usuário possui solicitações de livros em aberto. Deseja continuar e cancelar essas solicitações?",
+                    "open_requests_as_requester": [
+                        {"id": req.id, "book_title": req.book.title} for req in open_requests_as_requester
+                    ],
+                    "open_requests_as_donor": [
+                        {"id": req.id, "book_title": req.book.title, "requester": req.user.name} for req in open_requests_as_donor
+                    ]
+                }
+                raise serializers.ValidationError(response)
+
+            # Caso o cliente confirme, tratar as solicitações pendentes
+            # 1. Se for solicitante, cancelar as solicitações e liberar os livros
+            for request in open_requests_as_requester:
+                update_book_status(request.book, 'available', clear_request=True)
+                request.status = 'cancelled'
+                request.save()
+
+            # 2. Se for doador, cancelar as solicitações e excluir os livros
+            for request in open_requests_as_donor:
+                request.status = 'cancelled'
+                request.save()
+
+            # Excluir todos os livros do usuário doador
+            instance.books.all().delete()
+
+        # Desativar o usuário
+        instance.is_active = False
+        instance.save()
     
     def get_queryset(self):
     # Se não for admin, o usuário só pode ver seus próprios dados
@@ -127,3 +167,51 @@ class BookRequestViewSet(viewsets.ModelViewSet):
         update_book_status(book_request.book, 'available', clear_request=True)
 
         return Response({"detail": "Pedido cancelado com sucesso."}, status=status.HTTP_200_OK)
+
+class DonorBookRequestViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request):
+        """Lista as solicitações associadas aos livros do usuário logado."""
+        user = request.user
+        book_requests = BookRequest.objects.filter(book__user=user)
+        serializer = BookRequestSerializer(book_requests, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['patch'], url_path='approve')
+    def approve_request(self, request, pk=None):
+        """Aprova uma solicitação de livro."""
+        try:
+            book_request = BookRequest.objects.get(pk=pk, book__user=request.user)
+        except BookRequest.DoesNotExist:
+            return Response({"detail": "Solicitação não encontrada ou você não tem permissão para aprová-la."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Atualizar o status da solicitação para 'approved'
+        book_request.status = 'approved'
+        book_request.save()
+
+        # Atualizar o status do livro para 'unavailable'
+        book_request.book.status = 'unavailable'
+        book_request.book.save()
+
+        return Response({"detail": "Solicitação aprovada com sucesso."}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['patch'], url_path='deny')
+    def deny_request(self, request, pk=None):
+        """Nega uma solicitação de livro."""
+        try:
+            book_request = BookRequest.objects.get(pk=pk, book__user=request.user)
+        except BookRequest.DoesNotExist:
+            return Response({"detail": "Solicitação não encontrada ou você não tem permissão para negá-la."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Atualizar o status da solicitação para 'denied'
+        book_request.status = 'denied'
+        book_request.save()
+
+        # Atualizar o status do livro para 'available' e limpar o campo book_request
+        book = book_request.book
+        book.status = 'available'
+        book.book_request = None  # Limpa o campo book_request
+        book.save()
+
+        return Response({"detail": "Solicitação negada com sucesso. O livro está disponível no catálogo."}, status=status.HTTP_200_OK)
