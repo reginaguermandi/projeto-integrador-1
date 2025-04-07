@@ -74,30 +74,9 @@ class BookRequestViewSet(viewsets.ModelViewSet):
         return BookRequest.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        book = serializer.validated_data['book_id']
-        user = self.request.user 
-
-        if book.user == user:
-            raise serializers.ValidationError("Você não pode solicitar um livro que você mesmo cadastrou.")
-
-        # Verificar se já existe uma solicitação pendente para o livro
-        existing_request = BookRequest.objects.filter(book=book, status='pending').first()
-        if existing_request:
-            raise serializers.ValidationError("Este livro já tem um pedido pendente.")
-
-        # Verificar se o livro está disponível
-        if book.status != 'available':
-            raise serializers.ValidationError("Este livro não está disponível para doação")
-
-        # Atualizar o status do livro para 'requested' (ou outro status apropriado)
-        update_book_status(book, 'requested')
-
-        # Atribuir a solicitação ao usuário logado
-        book_request = serializer.save(user=self.request.user)
-
-        # Atualizar o campo `book_request` no livro
-        book.book_request = book_request
-        book.save()
+        # Atualizar o status do livro para 'requested'
+        book_request = serializer.save()
+        update_book_status(book_request.book, 'requested')
 
     def perform_update(self, serializer):
         instance = serializer.save()
