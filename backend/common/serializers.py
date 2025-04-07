@@ -154,24 +154,6 @@ class BookRequestSerializer(serializers.ModelSerializer):
         fields = ['id', 'book', 'book_id', 'delivery_option', 'status']
         read_only_fields = ['user']
 
-    def validate(self, data):
-        book = data['book_id']
-        user = self.context['request'].user
-
-        # Verificar se o usuário está tentando solicitar seu próprio livro
-        if book.user == user:
-            raise serializers.ValidationError(_("Você não pode solicitar um livro que você mesmo cadastrou."))
-
-        # Verificar se já existe uma solicitação pendente para o livro
-        if BookRequest.objects.filter(book=book, status='pending').exists():
-            raise serializers.ValidationError(_("Este livro já tem um pedido pendente."))
-
-        # Verificar se o livro está disponível
-        if book.status != 'available':
-            raise serializers.ValidationError(_("Este livro não está disponível para doação."))
-
-        return data
-
     def create(self, validated_data):
         # Atribuir automaticamente o 'user' durante a criação
         validated_data['book'] = validated_data.pop('book_id')
@@ -185,9 +167,7 @@ class BookRequestSerializer(serializers.ModelSerializer):
         return rep
 
 
-
 #Books
-
 
 class BookSerializer(serializers.ModelSerializer):
     book_request = BookRequestSerializer(read_only=True)  # Exibindo a solicitação associada ao livro
@@ -197,3 +177,4 @@ class BookSerializer(serializers.ModelSerializer):
         model = Book
         fields = ['id', 'title', 'author', 'description', 'category', 'classification', 'status', 'user', 'book_request']
         read_only_fields = ['user', 'created_at']
+
