@@ -112,7 +112,7 @@ class BookRequest(models.Model):
         ('denied', 'Denied'),
     )
 
-    book = models.OneToOneField(Book, on_delete=models.CASCADE, related_name='book_request_rel')
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='book_request_rel')
     user = models.ForeignKey(User, related_name='book_requests', on_delete=models.CASCADE)
     delivery_option = models.CharField(max_length=255)
     status = models.CharField(
