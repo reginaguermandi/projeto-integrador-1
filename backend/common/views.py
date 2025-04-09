@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework import viewsets, serializers, status
-from .models import User, Book, BookRequest
-from .serializers import UserSerializer, BookSerializer, BookRequestSerializer
+from .models import User, Book, BookRequest, PickupPoint
+from .serializers import UserSerializer, BookSerializer, BookRequestSerializer, PickupPointSerializer
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -75,6 +75,9 @@ class UserViewSet(viewsets.ModelViewSet):
             return User.objects.filter(id=self.request.user.id)
         return super().get_queryset()
 
+class PickupPointViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = PickupPoint.objects.all()
+    serializer_class = PickupPointSerializer
 
 class BookViewSet(viewsets.ModelViewSet):
     queryset = Book.objects.all()

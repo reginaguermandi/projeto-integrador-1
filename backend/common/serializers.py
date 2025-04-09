@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from datetime import datetime
 from django.utils.translation import gettext as _
-from .models import User, Book, BookRequest, Address
+from .models import User, Book, BookRequest, Address, PickupPoint
 
 class UserSerializer(serializers.ModelSerializer):
     street = serializers.CharField(write_only=True)
@@ -131,6 +131,11 @@ class UserSerializer(serializers.ModelSerializer):
                 setattr(address, attr, value)
         address.save()
 
+class PickupPointSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PickupPoint
+        fields = '__all__'
+
 #Book Request
 class BookDonorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -149,10 +154,11 @@ class BookRequestSerializer(serializers.ModelSerializer):
     requester_name = serializers.CharField(source='user.name', read_only=True)
     book = BookInfoSerializer(read_only=True)
     book_id = serializers.PrimaryKeyRelatedField(queryset=Book.objects.all(), write_only=True)
+    pickup_point = PickupPointSerializer(source='book.pickup_point', read_only=True)  # Detalhes do ponto de coleta
 
     class Meta:
         model = BookRequest
-        fields = ['id', 'book', 'book_id', 'requester_name', 'delivery_option', 'status']
+        fields = ['id', 'book', 'book_id', 'requester_name', 'pickup_point', 'status']
         read_only_fields = ['user', 'id', 'book', 'requester_name', 'status']
 
     def create(self, validated_data):
@@ -163,7 +169,7 @@ class BookRequestSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        # Remove o book_id da resposta (só serve pro POST)
+        # Remove o book_id da resposta (só serve para o POST)
         rep.pop('book_id', None)
         return rep
 
@@ -173,9 +179,13 @@ class BookRequestSerializer(serializers.ModelSerializer):
 class BookSerializer(serializers.ModelSerializer):
     book_request = BookRequestSerializer(read_only=True)  # Exibindo a solicitação associada ao livro
     user = serializers.StringRelatedField()  # Exibindo o nome do usuário associado ao livro
+    pickup_point = PickupPointSerializer(read_only=True)
+    pickup_point_id = serializers.PrimaryKeyRelatedField(
+        queryset=PickupPoint.objects.all(), source='pickup_point', write_only=True
+    )
 
     class Meta:
         model = Book
-        fields = ['id', 'title', 'author', 'description', 'category', 'classification', 'status', 'user', 'book_request']
+        fields = ['id', 'title', 'author', 'description', 'category', 'classification', 'pickup_point', 'pickup_point_id', 'status', 'user', 'book_request']
         read_only_fields = ['user', 'created_at']
 
