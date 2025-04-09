@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import UserViewSet, BookViewSet, BookRequestViewSet, DonorBookRequestViewSet
+from .views import UserViewSet, BookViewSet, BookRequestViewSet, DonorBookRequestViewSet, PickupPointViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 
@@ -8,6 +8,8 @@ router = DefaultRouter()
 router.register(r'users', UserViewSet)
 router.register(r'book_requests', BookRequestViewSet)
 router.register(r'donor-requests', DonorBookRequestViewSet, basename='donor-requests')
+router.register(r'pickup-points', PickupPointViewSet, basename='pickup-point')
+
 
 urlpatterns = [
     path('api/', include(router.urls)),

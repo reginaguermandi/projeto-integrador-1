@@ -61,6 +61,17 @@ class Address(models.Model):
     def __str__(self):
         return f'{self.street}, {self.city}'
 
+class PickupPoint(models.Model):
+    name = models.CharField(max_length=100)
+    street = models.CharField(max_length=255)
+    number = models.CharField(max_length=10)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=2)
+    zip = models.CharField(max_length=10)
+
+    def __str__(self):
+        return f"{self.name} - {self.street}, {self.number} - {self.city}/{self.state}"
+
 # Modelo de livro
 class Book(models.Model):
     STATUS_CHOICES = (
@@ -83,7 +94,6 @@ class Book(models.Model):
         ('romance', 'Romance'),
         ('horror', 'Horror'),
         ('science_fiction', 'Ficção científica'),
-        
     )
 
     title = models.CharField(max_length=255)
@@ -97,7 +107,8 @@ class Book(models.Model):
         default='available',
     )
     user = models.ForeignKey(User, related_name='books', on_delete=models.CASCADE)
-    book_request = models.OneToOneField('BookRequest', on_delete=models.SET_NULL, null=True, blank=True, related_name='book_requested')  # related_name ajustado
+    book_request = models.OneToOneField('BookRequest', on_delete=models.SET_NULL, null=True, blank=True, related_name='book_requested')
+    pickup_point = models.ForeignKey('PickupPoint', on_delete=models.PROTECT)
 
     def __str__(self):
         return self.title
@@ -114,7 +125,6 @@ class BookRequest(models.Model):
 
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='book_request_rel')
     user = models.ForeignKey(User, related_name='book_requests', on_delete=models.CASCADE)
-    delivery_option = models.CharField(max_length=255)
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -123,4 +133,5 @@ class BookRequest(models.Model):
 
     def __str__(self):
         return f"Request for {self.book.title} by {self.user.name}"
+
     
