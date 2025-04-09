@@ -66,7 +66,6 @@ class Book(models.Model):
     STATUS_CHOICES = (
         ('available', 'Available'),
         ('unavailable', 'Unavailable'),
-        ('reserved', 'Reserved'),
     )
 
     AGE_CHOICES = (
@@ -78,11 +77,11 @@ class Book(models.Model):
     )
 
     CATEGORY_CHOICES = (
-        ('fiction', 'Ficção'),
+        ('fantasy', 'Fantasia'),
         ('non_fiction', 'Não-ficção'),
         ('adventure', 'Aventura'),
         ('romance', 'Romance'),
-        ('mystery', 'Mistério'),
+        ('horror', 'Horror'),
         ('science_fiction', 'Ficção científica'),
         
     )
@@ -107,9 +106,10 @@ class Book(models.Model):
 # Modelo de solicitação de livro
 class BookRequest(models.Model):
     STATUS_CHOICES = (
-        ('pending', 'Pending'),
-        ('approved', 'Approved'),
-        ('denied', 'Denied'),
+        ('pending', 'Pendente'), 
+        ('awaiting_pickup', 'Aguardando Retirada'), 
+        ('delivered', 'Entregue'),  
+        ('cancelled', 'Cancelada'),
     )
 
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='book_request_rel')
