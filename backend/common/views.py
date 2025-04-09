@@ -144,12 +144,52 @@ class BookRequestViewSet(viewsets.ModelViewSet):
         instance = serializer.save()
         book = instance.book
 
-        # Se o status do pedido for alterado para "approved" ou "denied", limpar o campo `book_request` do livro
-        if instance.status == 'approved':
+        # Atualizar o status do livro com base no status da solicitação
+        if instance.status == 'awaiting_pickup':
+            # O livro está aguardando retirada
+            update_book_status(book, 'unavailable', clear_request=False)
+        elif instance.status == 'delivered':
+            # O livro foi entregue, não está mais disponível
             update_book_status(book, 'unavailable', clear_request=True)
-        elif instance.status == 'denied':
-            # Se o pedido for negado, liberar o livro para ser requisitado novamente
+        elif instance.status == 'cancelled':
+            # Se o pedido for cancelado, liberar o livro para ser requisitado novamente
             update_book_status(book, 'available', clear_request=True)
+
+    @action(detail=True, methods=['patch'], url_path='confirm-pickup')
+    def confirmar_retirada(self, request, pk=None):
+        """Confirma a retirada do livro pelo solicitante."""
+        book_request = self.get_object()
+
+        # Verifica se o usuário é o solicitante
+        if book_request.user != request.user:
+            return Response({"detail": "Você não tem permissão para confirmar a retirada deste pedido."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Atualizar o status da solicitação para 'delivered'
+        book_request.status = 'delivered'
+        book_request.save()
+
+        # Atualizar o status do livro para 'unavailable' e limpar o campo book_request
+        update_book_status(book_request.book, 'unavailable', clear_request=True)
+
+        return Response({"detail": "Retirada confirmada com sucesso. O livro foi marcado como entregue."}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['patch'], url_path='cancel-request')
+    def cancelar(self, request, pk=None):
+        """Cancela a solicitação pelo solicitante."""
+        book_request = self.get_object()
+
+        # Verifica se o usuário é o solicitante
+        if book_request.user != request.user:
+            return Response({"detail": "Você não tem permissão para cancelar este pedido."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Atualizar o status da solicitação para 'cancelled'
+        book_request.status = 'cancelled'
+        book_request.save()
+
+        # Atualizar o status do livro para 'available' e limpar o campo book_request
+        update_book_status(book_request.book, 'available', clear_request=True)
+
+        return Response({"detail": "Solicitação cancelada com sucesso. O livro voltou a ficar disponível no catálogo."}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], url_path='cancelar')
     def cancelar(self, request, pk=None):
@@ -186,15 +226,15 @@ class DonorBookRequestViewSet(viewsets.ViewSet):
         except BookRequest.DoesNotExist:
             return Response({"detail": "Solicitação não encontrada ou você não tem permissão para aprová-la."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Atualizar o status da solicitação para 'approved'
-        book_request.status = 'approved'
+        # Atualizar o status da solicitação para 'awaiting_pickup'
+        book_request.status = 'awaiting_pickup'
         book_request.save()
 
         # Atualizar o status do livro para 'unavailable'
         book_request.book.status = 'unavailable'
         book_request.book.save()
 
-        return Response({"detail": "Solicitação aprovada com sucesso."}, status=status.HTTP_200_OK)
+        return Response({"detail": "Solicitação aprovada com sucesso. O livro está aguardando retirada."}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['patch'], url_path='deny')
     def deny_request(self, request, pk=None):
@@ -204,8 +244,8 @@ class DonorBookRequestViewSet(viewsets.ViewSet):
         except BookRequest.DoesNotExist:
             return Response({"detail": "Solicitação não encontrada ou você não tem permissão para negá-la."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Atualizar o status da solicitação para 'denied'
-        book_request.status = 'denied'
+        # Atualizar o status da solicitação para 'cancelled'
+        book_request.status = 'cancelled'
         book_request.save()
 
         # Atualizar o status do livro para 'available' e limpar o campo book_request
