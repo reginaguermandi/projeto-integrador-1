@@ -14,7 +14,7 @@ def update_book_status(book, status, clear_request=False):
     book.save()
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.filter(is_active=True)  # Só listar usuários ativos
+    queryset = User.objects.filter(is_active=True)
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
@@ -27,7 +27,6 @@ class UserViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
     
     def perform_destroy(self, instance):
-        """Sobrescreve a destruição padrão para verificar solicitações em aberto."""
         # Verificar se o usuário possui solicitações pendentes como solicitante
         open_requests_as_requester = BookRequest.objects.filter(user=instance, status='pending')
 
@@ -35,10 +34,8 @@ class UserViewSet(viewsets.ModelViewSet):
         open_requests_as_donor = BookRequest.objects.filter(book__user=instance, status='pending')
 
         if open_requests_as_requester.exists() or open_requests_as_donor.exists():
-            # Verificar se o cliente confirmou a exclusão
             confirm = self.request.query_params.get('confirm', 'false').lower()
             if confirm != 'true':
-                # Retornar mensagem informando sobre as solicitações em aberto
                 response = {
                     "detail": "O usuário possui solicitações de livros em aberto. Deseja continuar e cancelar essas solicitações?",
                     "open_requests_as_requester": [
@@ -50,27 +47,22 @@ class UserViewSet(viewsets.ModelViewSet):
                 }
                 raise serializers.ValidationError(response)
 
-            # Caso o cliente confirme, tratar as solicitações pendentes
-            # 1. Se for solicitante, cancelar as solicitações e liberar os livros
+            # Caso o cliente confirme a exclusão, tratar as solicitações pendentes
             for request in open_requests_as_requester:
                 update_book_status(request.book, 'available', clear_request=True)
                 request.status = 'cancelled'
                 request.save()
 
-            # 2. Se for doador, cancelar as solicitações e excluir os livros
             for request in open_requests_as_donor:
                 request.status = 'cancelled'
                 request.save()
 
-            # Excluir todos os livros do usuário doador
             instance.books.all().delete()
 
-        # Desativar o usuário
         instance.is_active = False
         instance.save()
     
     def get_queryset(self):
-    # Se não for admin, o usuário só pode ver seus próprios dados
         if not self.request.user.is_staff:
             return User.objects.filter(id=self.request.user.id)
         return super().get_queryset()
@@ -84,7 +76,7 @@ class BookViewSet(viewsets.ModelViewSet):
     serializer_class = BookSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
-    def get_queryset(self):
+    def get_queryset(self): 
         user = self.request.user
 
         if self.action == 'list' and 'my-books' in self.request.path:
@@ -98,7 +90,6 @@ class BookViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
-        """Atribuir o dono do livro ao usuário logado."""
         serializer.save(user=self.request.user)
 
     def perform_update(self, serializer):
@@ -117,7 +108,6 @@ class BookRequestViewSet(viewsets.ModelViewSet):
         return BookRequest.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        # Atualizar o status do livro para 'requested'
         book = serializer.validated_data['book_id']
         user = self.request.user 
 
@@ -133,13 +123,9 @@ class BookRequestViewSet(viewsets.ModelViewSet):
         if book.status != 'available':
             raise serializers.ValidationError("Este livro não está disponível para doação")
 
-        # Atualizar o status do livro para 'requested' (ou outro status apropriado)
         update_book_status(book, 'requested')
-
-        # Atribuir a solicitação ao usuário logado
         book_request = serializer.save(user=self.request.user)
 
-        # Atualizar o campo `book_request` no livro
         book.book_request = book_request
         book.save()
 
@@ -149,18 +135,14 @@ class BookRequestViewSet(viewsets.ModelViewSet):
 
         # Atualizar o status do livro com base no status da solicitação
         if instance.status == 'awaiting_pickup':
-            # O livro está aguardando retirada
             update_book_status(book, 'unavailable', clear_request=False)
         elif instance.status == 'delivered':
-            # O livro foi entregue, não está mais disponível
             update_book_status(book, 'unavailable', clear_request=True)
         elif instance.status == 'cancelled':
-            # Se o pedido for cancelado, liberar o livro para ser requisitado novamente
             update_book_status(book, 'available', clear_request=True)
 
     @action(detail=True, methods=['patch'], url_path='confirm-pickup')
-    def confirmar_retirada(self, request, pk=None):
-        """Confirma a retirada do livro pelo solicitante."""
+    def confirm_pickup(self, request, pk=None):
         book_request = self.get_object()
 
         # Verifica se o usuário é o solicitante
@@ -177,7 +159,7 @@ class BookRequestViewSet(viewsets.ModelViewSet):
         return Response({"detail": "Retirada confirmada com sucesso. O livro foi marcado como entregue."}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['patch'], url_path='cancel-request')
-    def cancelar(self, request, pk=None):
+    def cancel_request(self, request, pk=None):
         """Cancela a solicitação pelo solicitante."""
         book_request = self.get_object()
 
@@ -194,8 +176,8 @@ class BookRequestViewSet(viewsets.ModelViewSet):
 
         return Response({"detail": "Solicitação cancelada com sucesso. O livro voltou a ficar disponível no catálogo."}, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['post'], url_path='cancelar')
-    def cancelar(self, request, pk=None):
+    @action(detail=True, methods=['post'], url_path='cancel')
+    def cancel(self, request, pk=None):
         book_request = self.get_object()
 
         # Verifica se o usuário é o dono da solicitação

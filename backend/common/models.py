@@ -33,19 +33,17 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone = models.CharField(max_length=15, null=True, blank=True)
     is_active = models.CharField(default=True)
     
-    # Campos padrão de usuários
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     
     objects = UserManager()
 
-    USERNAME_FIELD = 'email'  # O campo usado para autenticação
-    REQUIRED_FIELDS = ['name']  # Campos obrigatórios ao criar um superusuário
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['name']
 
     def __str__(self):
         return self.name
     
-    # Excluir usuário logicamente (mudando is_active para False)
     def delete(self, *args, **kwargs):
         self.is_active = False
         self.save()
@@ -113,7 +111,6 @@ class Book(models.Model):
     def __str__(self):
         return self.title
 
-
 # Modelo de solicitação de livro
 class BookRequest(models.Model):
     STATUS_CHOICES = (
@@ -133,5 +130,4 @@ class BookRequest(models.Model):
 
     def __str__(self):
         return f"Request for {self.book.title} by {self.user.name}"
-
     
