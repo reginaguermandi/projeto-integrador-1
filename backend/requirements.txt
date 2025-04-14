@@ -6,4 +6,5 @@ djangorestframework_simplejwt==5.5.0
 gunicorn==23.0.0
 packaging==24.2
 PyJWT==2.9.0
+python-decouple==3.8
 sqlparse==0.5.3
