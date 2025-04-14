@@ -18,5 +18,5 @@ urlpatterns = [
     path('api/my-books/', BookViewSet.as_view({'get': 'list', 'post': 'create'}), name='my-books'),
     path('api/my-books/<int:pk>/', BookViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='my-book-details'),
     path('api/books/catalog', BookViewSet.as_view({'get': 'list'}), name='book-catalog'),
-    path('api/book_requests/<int:pk>/cancelar/', BookRequestViewSet.as_view({'post': 'cancelar'}), name='bookrequest-cancelar'),
+    path('api/book_requests/<int:pk>/cancel/', BookRequestViewSet.as_view({'post': 'cancel'}), name='bookrequest-cancel'),
 ]
