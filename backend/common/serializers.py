@@ -8,19 +8,16 @@ class UserSerializer(serializers.ModelSerializer):
     number = serializers.CharField(write_only=True)
     city = serializers.CharField(write_only=True)
     zip = serializers.CharField(write_only=True)
-
-    # Adicionando campos de endereço na resposta
     address = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = User
         fields = ['id', 'name', 'email', 'password', 'birth_date', 'phone', 'street', 'number', 'city', 'zip', 'address']
         extra_kwargs = {
-            'password': {'write_only': True},  # Não enviar a senha em respostas
+            'password': {'write_only': True},
         }
 
     def get_address(self, obj):
-        # Recupera o endereço associado ao usuário
         address = Address.objects.filter(user=obj).first()
         if address:
             return {
@@ -64,22 +61,22 @@ class UserSerializer(serializers.ModelSerializer):
 
     def validate_street(self, value):
         if not value.strip():
-            raise serializers.ValidationError(_("O campo 'street' não pode estar vazio."))
+            raise serializers.ValidationError(_("O campo rua não pode estar vazio."))
         return value
 
     def validate_number(self, value):
         if not value.isdigit():
-            raise serializers.ValidationError(_("O campo 'number' deve conter apenas números."))
+            raise serializers.ValidationError(_("O campo número deve conter apenas números."))
         return value
 
     def validate_city(self, value):
         if not value.strip():
-            raise serializers.ValidationError(_("O campo 'city' não pode estar vazio."))
+            raise serializers.ValidationError(_("O campo cidade não pode estar vazio."))
         return value
 
     def validate_zip(self, value):
         if not value.isdigit() or len(value) != 8:
-            raise serializers.ValidationError(_("O campo 'zip' deve conter exatamente 8 dígitos numéricos."))
+            raise serializers.ValidationError(_("O campo cep deve conter exatamente 8 dígitos numéricos."))
         return value
 
     def create(self, validated_data):
@@ -131,12 +128,13 @@ class UserSerializer(serializers.ModelSerializer):
                 setattr(address, attr, value)
         address.save()
 
+#Ponto de Coleta
 class PickupPointSerializer(serializers.ModelSerializer):
     class Meta:
         model = PickupPoint
         fields = '__all__'
 
-#Book Request
+#Solicitação de Livro
 class BookDonorSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -149,12 +147,11 @@ class BookInfoSerializer(serializers.ModelSerializer):
         model = Book
         fields = ['id', 'title', 'author', 'donated_by']
 
-
 class BookRequestSerializer(serializers.ModelSerializer):
     requester_name = serializers.CharField(source='user.name', read_only=True)
     book = BookInfoSerializer(read_only=True)
     book_id = serializers.PrimaryKeyRelatedField(queryset=Book.objects.all(), write_only=True)
-    pickup_point = PickupPointSerializer(source='book.pickup_point', read_only=True)  # Detalhes do ponto de coleta
+    pickup_point = PickupPointSerializer(source='book.pickup_point', read_only=True)
 
     class Meta:
         model = BookRequest
@@ -162,23 +159,19 @@ class BookRequestSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'id', 'book', 'requester_name', 'status']
 
     def create(self, validated_data):
-        # Atribuir automaticamente o 'user' durante a criação
         validated_data['book'] = validated_data.pop('book_id')
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        # Remove o book_id da resposta (só serve para o POST)
         rep.pop('book_id', None)
         return rep
 
-
-#Books
-
+#Livros
 class BookSerializer(serializers.ModelSerializer):
-    book_request = BookRequestSerializer(read_only=True)  # Exibindo a solicitação associada ao livro
-    user = serializers.StringRelatedField()  # Exibindo o nome do usuário associado ao livro
+    book_request = BookRequestSerializer(read_only=True)
+    user = serializers.StringRelatedField()
     pickup_point = PickupPointSerializer(read_only=True)
     pickup_point_id = serializers.PrimaryKeyRelatedField(
         queryset=PickupPoint.objects.all(), source='pickup_point', write_only=True

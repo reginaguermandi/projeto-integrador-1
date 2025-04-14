@@ -76,7 +76,7 @@ class BookViewSet(viewsets.ModelViewSet):
     serializer_class = BookSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
-    def get_queryset(self):
+    def get_queryset(self): 
         user = self.request.user
 
         if self.action == 'list' and 'my-books' in self.request.path:
