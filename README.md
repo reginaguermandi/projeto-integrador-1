@@ -92,11 +92,62 @@ O servidor estará rodando em: http://127.0.0.1:8000
    - Caso aceite, o livro fica aguardando retirada no local informado pelo doador.
    - O status da retirada é atualizado pelo usuário solicitante após a retirada.
 
-## **Rotas**
+# **Rotas**
 
-### **Login**
+## Catálogo
 
-**POST /api/login/**
+### **Listar Catalogo:** `GET /api/books/catalog/`
+
+Corpo da Resposta (200 OK):
+
+```json
+[
+	{
+		"id": 1,
+		"title": "Livro AAA",
+		"author": "Algum Autor",
+		"description": "Descrição do livro.",
+		"category": "fantasy",
+		"classification": "18_and_up",
+		"pickup_point": {
+			"id": 1,
+			"name": "Padaria do Zé",
+			"street": "Nome da Rua",
+			"number": "23-12",
+			"city": "Cidade",
+			"state": "UF",
+			"zip": "17015172"
+		},
+		"status": "available",
+		"user": "renata",
+		"book_request": null
+	},
+	{
+		"id": 2,
+		"title": "Livro BBB",
+		"author": "Algum Outro Autor",
+		"description": "Outra descrição do livro.",
+		"category": "fantasy",
+		"classification": "18_and_up",
+		"pickup_point": {
+			"id": 1,
+			"name": "Padaria do Zé",
+			"street": "Nome da Rua",
+			"number": "23-12",
+			"city": "Cidade",
+			"state": "UF",
+			"zip": "17015172"
+		},
+		"status": "available",
+		"user": "renata",
+		"book_request": null
+	}
+]
+```
+
+## **Login**
+
+### **Logar com Usuário:** `POST /api/login/`
 
 Corpo da requisição:
 
@@ -123,9 +174,9 @@ Resposta Falha(401 Unauthorized):
 }
 ```
 
-### Usuários
+## Usuários
 
-**POST /api/users/**
+### **Criar Usuário:** `POST /api/users/`
 
 Corpo da requisição:
 
@@ -176,7 +227,7 @@ Resposta (400 Bad Request):
 }
 ```
 
-**PATCH /api/users/{id}**
+### **Editar Usuário:** `PATCH /api/users/{id}/`
 
 Corpo da requisição: inserir apenas os campos que quer editar
 
@@ -212,6 +263,244 @@ Resposta (400 Bad Request): exemplo de email incorreto
 }
 ```
 
-**DELETE /api/users/{id}**
+### **Deletar Usuário:** `DELETE /api/users/{id}/`
 
-Resposta (204 No Content):
+- Corpo da Resposta (204 No Content): Sem conteúdo
+
+## Meus Livros
+
+### **Criar Livro:** `POST /api/my-books/`
+
+Corpo da Requisição:
+
+```json
+{
+	"title": "Livro AAA",
+	"author": "Algum Autor",
+	"description": "Descrição do livro.",
+	"category": "fantasy",
+	"classification": "18_and_up",
+	"pickup_point_id": 1
+}
+```
+
+Corpo da Resposta (201 Created):
+
+```json
+{
+	"id": 1,
+	"title": "Livro AAA",
+	"author": "Algum Autor",
+	"description": "Descrição do livro.",
+	"category": "fantasy",
+	"classification": "18_and_up",
+	"pickup_point": {
+		"id": 1,
+		"name": "Padaria do Zé",
+		"street": "Nome da Rua",
+		"number": "23-12",
+		"city": "Cidade",
+		"state": "SP",
+		"zip": "17015172"
+	},
+	"status": "available",
+	"user": "renata",
+	"book_request": null
+}
+```
+
+### **Editar Livro:** `PATCH /api/my-books/{id}/`
+
+Corpo da Requisição: campo que quer atualizar
+
+```json
+{
+	"author": "Maria E Algumas Coisa"
+}
+```
+
+Corpo da Resposta (200 OK):
+
+```json
+{
+	"id": 1,
+	"title": "Livro AAA",
+	"author": "Maria E Algumas Coisa",
+	"description": "Descrição do livro.",
+	"category": "fantasy",
+	"classification": "18_and_up",
+	"pickup_point": {
+		"id": 1,
+		"name": "Padaria do Zé",
+		"street": "Nome da Rua",
+		"number": "23-12",
+		"city": "Cidade",
+		"state": "UF",
+		"zip": "17015172"
+	},
+	"status": "available",
+	"user": "renata",
+	"book_request": null
+}
+```
+
+### **Deletar Livro:** `DELETE /api/my-books/{id}/`
+
+- Corpo da Resposta (204 No Content): Sem conteúdo
+
+## Solicitar Doação
+
+### **Solicitar uma doação:** `POST /api/books_requests/`
+
+Corpo da Requisição:
+
+```json
+{
+	"book_id": 1
+}
+```
+
+Corpo da Resposta (201 Created):
+
+```json
+{
+	"id": 1,
+	"book": {
+		"id": 1,
+		"title": "Livro AAA",
+		"author": "Algum Autor",
+		"donated_by": {
+			"id": 1,
+			"name": "renata",
+			"email": "renata@mail.com"
+		}
+	},
+	"requester_name": "nicolas",
+	"pickup_point": {
+		"id": 1,
+		"name": "Padaria do Zé",
+		"street": "Nome da Rua",
+		"number": "23-12",
+		"city": "Cidade",
+		"state": "UF",
+		"zip": "17015172"
+	},
+	"status": "pending"
+}
+```
+
+### **Listar Solicitações Realizadas:** `GET /api/books_requests/`
+
+Corpo da Resposta (200 OK):
+
+```json
+	{
+		"id": 1,
+		"book": {
+			"id": 1,
+			"title": "Livro AAA",
+			"author": "Algum Autor",
+			"donated_by": {
+				"id": 2,
+				"name": "nicolas",
+				"email": "nicolas@mail.com"
+			}
+		},
+		"requester_name": "renata",
+		"pickup_point": {
+			"id": 1,
+			"name": "Padaria do Zé",
+			"street": "Rua das Camelias",
+			"number": "23-12",
+			"city": "Bauru",
+			"state": "SP",
+			"zip": "17015172"
+		},
+		"status": "awaiting_pickup"
+	}
+]
+```
+
+### **Atualizar Status da Solicitação:** `PATCH /api/books_requests/{id}/confirm-pickup/`
+
+Corpo da Resposta (200 OK):
+
+```json
+{
+	"detail": "Retirada confirmada com sucesso. O livro foi marcado como entregue."
+}
+```
+
+## Solicitações
+
+### **Listar solicitações recebidas**: `GET /api/donor-requests/`
+
+```json
+{
+	"id": 1,
+	"book": {
+		"id": 1,
+		"title": "Livro AAA",
+		"author": "Algum Autor",
+		"donated_by": {
+			"id": 1,
+			"name": "renata",
+			"email": "renata@mail.com"
+		}
+	},
+	"requester_name": "nicolas",
+	"pickup_point": {
+		"id": 1,
+		"name": "Padaria do Zé",
+		"street": "Nome da Rua",
+		"number": "23-12",
+		"city": "Cidade",
+		"state": "UF",
+		"zip": "17015172"
+	},
+	"status": "pending"
+}
+```
+
+### **Aceitar solicitação recebedida:** `PATCH /api/donor-requests/{id}/approve/`
+
+```json
+{
+	"detail": "Solicitação aprovada com sucesso. O livro está aguardando retirada."
+}
+```
+
+### **Negar solicitação recebedida:** `PATCH /api/donor-requests/{id}/deny/`
+
+```json
+{
+	"detail": "Solicitação negada com sucesso. O livro está disponível no catálogo."
+}
+```
+
+## Ponto de Coleta
+
+### **Listar Pontos de Coleta:** `GET /api/pickup-points/`
+
+Corpo da Resposta (200 OK):
+
+```json
+[
+	{
+		"id": 1,
+		"name": "Padaria do Zé",
+		"street": "Nome da Rua",
+		"number": "23-12",
+		"city": "Cidade",
+		"zip": "17015172"
+	},
+	{
+		"id": 2,
+		"name": "Sebo da Maria",
+		"street": "Nome de Outra Rua",
+		"number": "23-13",
+		"city": "Cidade",
+		"zip": "06600605"
+	}
+]
+```
