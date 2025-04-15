@@ -96,7 +96,7 @@ O servidor estará rodando em: http://127.0.0.1:8000
 
 ## Catálogo
 
-### **Listar Catalogo:** `GET /api/books/catalog/`
+### **Listar Catalogo:** `GET /api/books/catalog/` (Sem Proteção)
 
 Corpo da Resposta (200 OK):
 
@@ -147,7 +147,7 @@ Corpo da Resposta (200 OK):
 
 ## **Login**
 
-### **Logar com Usuário:** `POST /api/login/`
+### **Logar com Usuário:** `POST /api/login/`(Sem Proteção)
 
 Corpo da requisição:
 
@@ -176,7 +176,7 @@ Resposta Falha(401 Unauthorized):
 
 ## Usuários
 
-### **Criar Usuário:** `POST /api/users/`
+### **Criar Usuário:** `POST /api/users/` (Sem Proteção)
 
 Corpo da requisição:
 
@@ -227,7 +227,7 @@ Resposta (400 Bad Request):
 }
 ```
 
-### **Editar Usuário:** `PATCH /api/users/{id}/`
+### **Editar Usuário:** `PATCH /api/users/{id}/` (Protegido)
 
 Corpo da requisição: inserir apenas os campos que quer editar
 
@@ -263,13 +263,35 @@ Resposta (400 Bad Request): exemplo de email incorreto
 }
 ```
 
-### **Deletar Usuário:** `DELETE /api/users/{id}/`
+### **Deletar Usuário Sem Solicitação Aberta:** `DELETE /api/users/{id}/` (Protegido)
 
 - Corpo da Resposta (204 No Content): Sem conteúdo
 
+### **Detelar Usuário Com Solicitação Aberta:** `DELETE /api/users/{id}/` (Protegido)
+
+Corpo da Resposta (400 Bad Request):
+
+```json
+{
+	"detail": "Você possui solicitações de livros em aberto. Deseja continuar e cancelar essas solicitações?",
+	"open_requests_as_requester": [],
+	"open_requests_as_donor": [
+		{
+			"id": "30",
+			"book_title": "Livro AAAA",
+			"requester": "lurdes"
+		}
+	]
+}
+```
+
+### **Confirmar Exclusão:** `DELETE /api/users/{id}/?confirm=true` (Protegido)
+
+Corpo da Resposta (201 No Content)
+
 ## Meus Livros
 
-### **Criar Livro:** `POST /api/my-books/`
+### **Criar Livro:** `POST /api/my-books/` (Protegido)
 
 Corpo da Requisição:
 
@@ -309,7 +331,58 @@ Corpo da Resposta (201 Created):
 }
 ```
 
-### **Editar Livro:** `PATCH /api/my-books/{id}/`
+##Listar Meus Livros:\*\* `GET /api/my-books/`
+
+```json
+[
+	{
+		"id": 17,
+		"title": "Livro AAA",
+		"author": "Algum Autor",
+		"description": "Outra descrição do livro.",
+		"category": "fantasy",
+		"classification": "18_and_up",
+		"pickup_point": {
+			"id": 1,
+			"name": "Padaria do Zé",
+			"street": "Rua das Camelias",
+			"number": "23-12",
+			"city": "Bauru",
+			"state": "SP",
+			"zip": "17015172"
+		},
+		"status": "requested",
+		"user": "lurdes",
+		"book_request": {
+			"id": 31,
+			"requester_name": "carlos",
+			"status": "pending"
+		}
+	},
+	{
+		"id": 18,
+		"title": "Livro BBB",
+		"author": "Algum Autor",
+		"description": "Outra descrição do livro.",
+		"category": "fantasy",
+		"classification": "18_and_up",
+		"pickup_point": {
+			"id": 1,
+			"name": "Padaria do Zé",
+			"street": "Rua das Camelias",
+			"number": "23-12",
+			"city": "Bauru",
+			"state": "SP",
+			"zip": "17015172"
+		},
+		"status": "available",
+		"user": "lurdes",
+		"book_request": null
+	}
+]
+```
+
+### **Editar Livro:** `PATCH /api/my-books/{id}/` (Protegido)
 
 Corpo da Requisição: campo que quer atualizar
 
@@ -344,13 +417,13 @@ Corpo da Resposta (200 OK):
 }
 ```
 
-### **Deletar Livro:** `DELETE /api/my-books/{id}/`
+### **Deletar Livro:** `DELETE /api/my-books/{id}/` (Protegido)
 
 - Corpo da Resposta (204 No Content): Sem conteúdo
 
 ## Solicitar Doação
 
-### **Solicitar uma doação:** `POST /api/books_requests/`
+### **Solicitar uma doação:** `POST /api/books_requests/` (Protegido)
 
 Corpo da Requisição:
 
@@ -389,7 +462,7 @@ Corpo da Resposta (201 Created):
 }
 ```
 
-### **Listar Solicitações Realizadas:** `GET /api/books_requests/`
+### **Listar Solicitações Realizadas:** `GET /api/books_requests/` (Protegido)
 
 Corpo da Resposta (200 OK):
 
@@ -421,7 +494,7 @@ Corpo da Resposta (200 OK):
 ]
 ```
 
-### **Atualizar Status da Solicitação:** `PATCH /api/books_requests/{id}/confirm-pickup/`
+### **Atualizar Status da Solicitação:** `PATCH /api/books_requests/{id}/confirm-pickup/` (Protegido)
 
 Corpo da Resposta (200 OK):
 
@@ -433,7 +506,7 @@ Corpo da Resposta (200 OK):
 
 ## Solicitações Recebidas
 
-### **Listar solicitações recebidas**: `GET /api/donor-requests/`
+### **Listar solicitações recebidas**: `GET /api/donor-requests/` (Protegido)
 
 ```json
 {
@@ -462,7 +535,7 @@ Corpo da Resposta (200 OK):
 }
 ```
 
-### **Aceitar solicitação recebedida:** `PATCH /api/donor-requests/{id}/approve/`
+### **Aceitar solicitação recebedida:** `PATCH /api/donor-requests/{id}/approve/` (Protegido)
 
 ```json
 {
@@ -470,7 +543,7 @@ Corpo da Resposta (200 OK):
 }
 ```
 
-### **Negar solicitação recebedida:** `PATCH /api/donor-requests/{id}/deny/`
+### **Negar solicitação recebedida:** `PATCH /api/donor-requests/{id}/deny/` (Protegido)
 
 ```json
 {
@@ -480,7 +553,7 @@ Corpo da Resposta (200 OK):
 
 ## Ponto de Coleta
 
-### **Listar Pontos de Coleta:** `GET /api/pickup-points/`
+### **Listar Pontos de Coleta:** `GET /api/pickup-points/` (Sem Proteção)
 
 Corpo da Resposta (200 OK):
 
