@@ -168,9 +168,16 @@ class BookRequestSerializer(serializers.ModelSerializer):
         rep.pop('book_id', None)
         return rep
 
+class SimplifiedBookRequestSerializer(serializers.ModelSerializer):
+    requester_name = serializers.CharField(source='user.name', read_only=True)
+
+    class Meta:
+        model = BookRequest
+        fields = ['id', 'requester_name', 'status']
+
 #Livros
 class BookSerializer(serializers.ModelSerializer):
-    book_request = BookRequestSerializer(read_only=True)
+    book_request = SimplifiedBookRequestSerializer(read_only=True)  # Usar o serializer simplificado
     user = serializers.StringRelatedField()
     pickup_point = PickupPointSerializer(read_only=True)
     pickup_point_id = serializers.PrimaryKeyRelatedField(
