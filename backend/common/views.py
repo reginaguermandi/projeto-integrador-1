@@ -5,6 +5,8 @@ from .serializers import UserSerializer, BookSerializer, BookRequestSerializer, 
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import APIException
+
 
 def update_book_status(book, status, clear_request=False):
     """Atualiza o status do livro e limpa o campo book_request, se necessário."""
@@ -28,16 +30,22 @@ class UserViewSet(viewsets.ModelViewSet):
     
     def perform_destroy(self, instance):
         # Verificar se o usuário possui solicitações pendentes como solicitante
-        open_requests_as_requester = BookRequest.objects.filter(user=instance, status='pending')
+        open_requests_as_requester = BookRequest.objects.filter(
+            user=instance, status__in=['pending', 'awaiting_pickup']
+        )
 
         # Verificar se o usuário possui solicitações pendentes como doador
-        open_requests_as_donor = BookRequest.objects.filter(book__user=instance, status='pending')
+        open_requests_as_donor = BookRequest.objects.filter(
+            book__user=instance, status__in=['pending', 'awaiting_pickup']
+        )
 
+        # Se houver solicitações pendentes, solicitar confirmação antes de excluir
         if open_requests_as_requester.exists() or open_requests_as_donor.exists():
             confirm = self.request.query_params.get('confirm', 'false').lower()
             if confirm != 'true':
+                # Retornar mensagem com detalhes das solicitações pendentes
                 response = {
-                    "detail": "O usuário possui solicitações de livros em aberto. Deseja continuar e cancelar essas solicitações?",
+                    "detail": "Você possui solicitações de livros em aberto. Deseja continuar e cancelar essas solicitações?",
                     "open_requests_as_requester": [
                         {"id": req.id, "book_title": req.book.title} for req in open_requests_as_requester
                     ],
@@ -47,7 +55,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 }
                 raise serializers.ValidationError(response)
 
-            # Caso o cliente confirme a exclusão, tratar as solicitações pendentes
+            # Caso o cliente confirme a exclusão, cancelar as solicitações pendentes
             for request in open_requests_as_requester:
                 update_book_status(request.book, 'available', clear_request=True)
                 request.status = 'cancelled'
@@ -57,8 +65,10 @@ class UserViewSet(viewsets.ModelViewSet):
                 request.status = 'cancelled'
                 request.save()
 
-        instance.books.all().delete()
+        # Excluir todos os livros disponíveis do usuário
+        instance.books.filter(status='available').delete()
 
+        # Desativar o usuário (soft delete)
         instance.is_active = False
         instance.save()
     

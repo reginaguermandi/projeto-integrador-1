@@ -431,7 +431,7 @@ Corpo da Resposta (200 OK):
 }
 ```
 
-## Solicitações
+## Solicitações Recebidas
 
 ### **Listar solicitações recebidas**: `GET /api/donor-requests/`
 
