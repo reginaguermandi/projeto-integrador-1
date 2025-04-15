@@ -57,7 +57,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 request.status = 'cancelled'
                 request.save()
 
-            instance.books.all().delete()
+        instance.books.all().delete()
 
         instance.is_active = False
         instance.save()
