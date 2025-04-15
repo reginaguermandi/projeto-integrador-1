@@ -79,7 +79,7 @@ python manage.py runserver
 
 O servidor estará rodando em: http://127.0.0.1:8000
 
-### **Fluxo Simples de Uso**
+## **Fluxo de Uso**
 
 1. **Navegação de Livros (Acesso Livre)**
    - Qualquer usuário pode acessar o site, navegar e visualizar o catálogo.
@@ -331,7 +331,7 @@ Corpo da Resposta (201 Created):
 }
 ```
 
-##Listar Meus Livros:\*\* `GET /api/my-books/`
+### Listar Meus Livros: `GET /api/my-books/` (Protegido)
 
 ```json
 [
@@ -467,6 +467,7 @@ Corpo da Resposta (201 Created):
 Corpo da Resposta (200 OK):
 
 ```json
+[
 	{
 		"id": 1,
 		"book": {
