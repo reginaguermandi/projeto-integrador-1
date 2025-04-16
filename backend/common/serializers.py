@@ -2,6 +2,8 @@ from rest_framework import serializers
 from datetime import datetime
 from django.utils.translation import gettext as _
 from .models import User, Book, BookRequest, Address, PickupPoint
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework.exceptions import ValidationError
 
 class UserSerializer(serializers.ModelSerializer):
     street = serializers.CharField(write_only=True)
@@ -177,15 +179,25 @@ class SimplifiedBookRequestSerializer(serializers.ModelSerializer):
 
 #Livros
 class BookSerializer(serializers.ModelSerializer):
-    book_request = SimplifiedBookRequestSerializer(read_only=True)  # Usar o serializer simplificado
-    user = serializers.StringRelatedField()
     pickup_point = PickupPointSerializer(read_only=True)
-    pickup_point_id = serializers.PrimaryKeyRelatedField(
-        queryset=PickupPoint.objects.all(), source='pickup_point', write_only=True
-    )
+    user = serializers.StringRelatedField()
+    book_request = serializers.SerializerMethodField()
 
     class Meta:
         model = Book
-        fields = ['id', 'title', 'author', 'description', 'category', 'classification', 'pickup_point', 'pickup_point_id', 'status', 'user', 'book_request']
-        read_only_fields = ['user', 'created_at']
+        fields = [
+            'id', 'title', 'author', 'description', 'category', 'classification',
+            'pickup_point', 'status', 'user', 'book_request'
+        ]
 
+    def get_book_request(self, obj):
+        # Retorna informações da solicitação associada, se houver
+        book_request = obj.book_request
+        if (book_request):
+            return {
+                'id': book_request.id,
+                'requester_name': book_request.user.name,
+                'status': book_request.status
+            }
+        return None
+    

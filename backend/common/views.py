@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import APIException
+from rest_framework.viewsets import ReadOnlyModelViewSet
 
 
 def update_book_status(book, status, clear_request=False):
@@ -88,16 +89,7 @@ class BookViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self): 
         user = self.request.user
-
-        if self.action == 'list' and 'my-books' in self.request.path:
-            return Book.objects.filter(user=user)
-
-        return Book.objects.filter(status='available')
-    
-    def get_permissions(self):
-        if self.action == 'list' and 'catalog' in self.request.path:
-            return [AllowAny()]
-        return [IsAuthenticated()]
+        return Book.objects.filter(user=user)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -250,3 +242,11 @@ class DonorBookRequestViewSet(viewsets.ViewSet):
         book.save()
 
         return Response({"detail": "Solicitação negada com sucesso. O livro está disponível no catálogo."}, status=status.HTTP_200_OK)
+
+class CatalogViewSet(ReadOnlyModelViewSet):
+    """
+    ViewSet para listar livros disponíveis publicamente e exibir detalhes de um livro.
+    """
+    queryset = Book.objects.filter(status='available')
+    permission_classes = [AllowAny]
+    serializer_class = BookSerializer
