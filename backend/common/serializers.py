@@ -180,24 +180,28 @@ class SimplifiedBookRequestSerializer(serializers.ModelSerializer):
 #Livros
 class BookSerializer(serializers.ModelSerializer):
     pickup_point = PickupPointSerializer(read_only=True)
+    pickup_point_id = serializers.PrimaryKeyRelatedField(
+        queryset=PickupPoint.objects.all(), source='pickup_point', write_only=True
+    )
     user = serializers.StringRelatedField()
+    user_id = serializers.IntegerField(source='user.id', read_only=True)  # Adiciona o ID do proprietário
+    user_email = serializers.EmailField(source='user.email', read_only=True)  # Adiciona o email do proprietário
     book_request = serializers.SerializerMethodField()
 
     class Meta:
         model = Book
         fields = [
             'id', 'title', 'author', 'description', 'category', 'classification',
-            'pickup_point', 'status', 'user', 'book_request'
+            'pickup_point', 'pickup_point_id', 'status', 'user', 'user_id', 'user_email', 'book_request'
         ]
 
     def get_book_request(self, obj):
         # Retorna informações da solicitação associada, se houver
         book_request = obj.book_request
-        if (book_request):
+        if book_request:
             return {
                 'id': book_request.id,
                 'requester_name': book_request.user.name,
                 'status': book_request.status
             }
         return None
-    
