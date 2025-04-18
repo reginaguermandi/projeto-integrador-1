@@ -104,6 +104,15 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
+        # Remover os dados de endereço de validated_data
+        address_data = {
+            'street': validated_data.pop('street', None),
+            'number': validated_data.pop('number', None),
+            'city': validated_data.pop('city', None),
+            'zip': validated_data.pop('zip', None),
+        }
+
+        # Atualizar os campos do usuário
         password = validated_data.pop('password', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -111,22 +120,17 @@ class UserSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
 
-        address_data = {
-            'street': validated_data.get('street'),
-            'number': validated_data.get('number'),
-            'city': validated_data.get('city'),
-            'zip': validated_data.get('zip'),
-        }
-
+        # Atualizar os campos do endereço, se fornecidos
         if any(address_data.values()):
             self.update_address(instance, address_data)
 
         return instance
 
     def update_address(self, instance, address_data):
+        # Obter ou criar o endereço associado ao usuário
         address, _ = Address.objects.get_or_create(user=instance)
         for attr, value in address_data.items():
-            if value is not None:
+            if value is not None:  # Atualizar apenas os campos fornecidos
                 setattr(address, attr, value)
         address.save()
 
