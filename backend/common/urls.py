@@ -9,8 +9,6 @@ router.register(r'book_requests', BookRequestViewSet)
 router.register(r'donor-requests', DonorBookRequestViewSet, basename='donor-requests')
 router.register(r'pickup-points', PickupPointViewSet, basename='pickup-point')
 router.register(r'catalog', CatalogViewSet, basename='catalog')
-router.register(r'books', BookViewSet, basename='books')
-
 
 urlpatterns = [
     path('api/', include(router.urls)),

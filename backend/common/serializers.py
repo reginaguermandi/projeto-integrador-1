@@ -104,6 +104,15 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
+        # Remover os dados de endereço de validated_data
+        address_data = {
+            'street': validated_data.pop('street', None),
+            'number': validated_data.pop('number', None),
+            'city': validated_data.pop('city', None),
+            'zip': validated_data.pop('zip', None),
+        }
+
+        # Atualizar os campos do usuário
         password = validated_data.pop('password', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -111,22 +120,17 @@ class UserSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
 
-        address_data = {
-            'street': validated_data.get('street'),
-            'number': validated_data.get('number'),
-            'city': validated_data.get('city'),
-            'zip': validated_data.get('zip'),
-        }
-
+        # Atualizar os campos do endereço, se fornecidos
         if any(address_data.values()):
             self.update_address(instance, address_data)
 
         return instance
 
     def update_address(self, instance, address_data):
+        # Obter ou criar o endereço associado ao usuário
         address, _ = Address.objects.get_or_create(user=instance)
         for attr, value in address_data.items():
-            if value is not None:
+            if value is not None:  # Atualizar apenas os campos fornecidos
                 setattr(address, attr, value)
         address.save()
 
@@ -180,24 +184,28 @@ class SimplifiedBookRequestSerializer(serializers.ModelSerializer):
 #Livros
 class BookSerializer(serializers.ModelSerializer):
     pickup_point = PickupPointSerializer(read_only=True)
+    pickup_point_id = serializers.PrimaryKeyRelatedField(
+        queryset=PickupPoint.objects.all(), source='pickup_point', write_only=True
+    )
     user = serializers.StringRelatedField()
+    user_id = serializers.IntegerField(source='user.id', read_only=True)  # Adiciona o ID do proprietário
+    user_email = serializers.EmailField(source='user.email', read_only=True)  # Adiciona o email do proprietário
     book_request = serializers.SerializerMethodField()
 
     class Meta:
         model = Book
         fields = [
             'id', 'title', 'author', 'description', 'category', 'classification',
-            'pickup_point', 'status', 'user', 'book_request'
+            'pickup_point', 'pickup_point_id', 'status', 'user', 'user_id', 'user_email', 'book_request'
         ]
 
     def get_book_request(self, obj):
         # Retorna informações da solicitação associada, se houver
         book_request = obj.book_request
-        if (book_request):
+        if book_request:
             return {
                 'id': book_request.id,
                 'requester_name': book_request.user.name,
                 'status': book_request.status
             }
         return None
-    
